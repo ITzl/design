@@ -3,37 +3,37 @@ import { Popover, Modal, Form, message,Button, Input} from 'antd';
 import './index.css'
 import ImgLayer from './layer/img';
 import TextLayer from './layer/text';
+import { text } from 'stream/consumers';
 
 const defaultText = {
     top: 0,
     left: 0,
-    width: 50,
-    height: 10,
+    // width: 100,
+    height: 20,
     zIndex: 2,
     fontInfo: {
-        value: '默认值',
+        value: '默认值默认值',
         names: '微软雅黑',
-        fontSize: 10,
-        color: 'red'
+        fontSize: 15,
+        color: 'red',
+        fontWeight: 'normal'
     }
 }
 
 const defaultImg = {
-    imgData: {
         width: 236,
         height: 133,
         top: 0,
         left: 10,
         zIndex: 1,
         src: 'https://gimg2.baidu.com/image_search/src=http%3A%2F%2Fimg.jj20.com%2Fup%2Fallimg%2F1114%2F113020142315%2F201130142315-1-1200.jpg&refer=http%3A%2F%2Fimg.jj20.com&app=2002&size=f9999,10000&q=a80&n=0&g=0n&fmt=auto?sec=1657792247&t=506b46cadd248c9a584678aabd073460'
-    }
 }
 
 
 
 export default  (props: any) => {
-    const [imgs, setImgs] = useState<any>(null);
-    const [texts, setText] = useState<any>(null);
+    const [imgs, setImgs] = useState<any>([]);
+    const [texts, setText] = useState<any>([]);
     const [containerSize, setContainerSize] = useState<any>(null);
     const [scale, setScale] = useState<number>(1);
     const [quit, setQuit] = useState<boolean>(false);
@@ -45,6 +45,13 @@ export default  (props: any) => {
       });
 
     const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        setText([defaultText]);
+        setImgs([defaultImg]);
+    
+    }, []);
+
     const stageSty = useMemo(() => {
         if (!containerSize) return {};
     
@@ -62,81 +69,46 @@ export default  (props: any) => {
       }, [containerSize]);
 
 
-    // const textRender = (text: any, i: number) => {
-    //     const {top, left, width, height, zIndex, fontInfo} = text;
-    //     const { value, names, fontSize, color} = fontInfo;
-    //     const pieces = [];
-    //     const len = fontInfo?.length;
-    //     let textLines = 1;
-    //     if (len) {
-    //         for (let i = 0; i < len; i++) {
-    //           const info = fontInfo[i];
-    //           let { names, color, text } = info;
-    //           const lineBreaks = text.match(/\r/g)?.length;
-    //           lineBreaks && (textLines += lineBreaks);
-    //           pieces.push({
-    //             value: text,
-    //             fontFamily: names,
-    //             color,
-    //           });
-    //         }
-    //       }
-    
-    //       const textHeight = height / textLines;
-    //       return (
-    //           <div
-    //           style={{
-    //               top,
-    //               left,
-    //               zIndex,
-    //               fontFamily: fontInfo.names,
-    //               fontSize: fontInfo.fontSize,
-    //               width,
-    //               height,
-    //               lineHeight: height,
-    //           }}
-    //           ref={textRef}
-    //           key={i}
-    //           >
-    //               <div style={{
-    //                   color,
-    //                   height: textHeight + 'px',
-    //                   lineHeight: textHeight + 'px'
-    //               }}
-    //                 data-r-text={zIndex}
-    //                 data-r-text-info={JSON.stringify({
-    //                     value,
-    //                     color,
-    //                     fontFamily: fontInfo.names,
-    //                     fontSize: fontInfo.fontSize,
-    //                     lineHeight: textHeight,
-    //                 })}
-    //               >
-    //                 {value}
-    //               </div>
-    //           </div>
-    //       )
-    // }
-    
-    
+    // 获得层级关系
+    const getzIndex = () => {
+        const totalLayer = texts.concat(imgs);
+        const curzIndex = Math.max.apply(Math,totalLayer.map((layer: any) => { return layer.zIndex }))
+        console.log('totalLayer', totalLayer, curzIndex) 
+        return curzIndex;
+    }
 
+ 
+    
     const onFinish =  (values: any, type: string) => {
-        console.log('Success:', values, type);
+        // getzIndex();
         if(type === 'image') {
             getImgSize(values.url).then((size: any) => {
                 console.log('img', size, size.width, size.height)
                 const addImg = {
-                    imgData:  {
                         width: size.width,
                         height: size.height,
                         top: 0,
                         left: 0,
-                        zIndex: imgs.length + texts.length + 1,
+                        zIndex: getzIndex() + 1,
                         src: values.url
-                    }
                 }
                 setImgs([...imgs, addImg])
             })   
+        }else if(type === 'text') {
+            const addText = {
+                top: 0,
+                left: 0,
+                height: 10,
+                zIndex: getzIndex() + 1,
+                fontInfo: {
+                    value: values.value,
+                    names: '微软雅黑',
+                    fontSize: 15,
+                    color: 'black',
+                    fontWeight: 'normal'
+                }
+            }
+            setText([...texts, addText]);
         }
     };
 
@@ -163,7 +135,7 @@ export default  (props: any) => {
             <Form.Item
                 label="图片地址"
                 name="url"
-                rules={[{ required: true, message: 'Please input your username!' }]}
+                rules={[{ required: true, message: '输入图片地址' }]}
             >
                 <Input />
             </Form.Item>
@@ -184,21 +156,15 @@ export default  (props: any) => {
             onFinish={(values: any) => onFinish(values, 'text')}
             autoComplete="off"
             >
-            <Form.Item
-                label="文字位置"
-                name="top"
-                rules={[{ required: true, message: 'Please input your username!' }]}
-            >
-                <Input />
-            </Form.Item>
+           
             <Form.Item
                 label="文字内容"
                 name="value"
-                rules={[{ required: true, message: 'Please input your username!' }]}
+                rules={[{ required: true, message: '输入文本内容' }]}
             >
                 <Input />
             </Form.Item>
-            <Form.Item wrapperCol={{ offset: 8, span: 16 }}>
+            <Form.Item wrapperCol={{ offset: 2, span: 22 }}>
                 <Button type="primary" htmlType="submit">
                     添加
                 </Button>
@@ -207,14 +173,58 @@ export default  (props: any) => {
     )
 
     const triggerClick = () => {
+        console.log('triggerClick', editingLockRef)
         if (editingLockRef.current) return;
         setQuit(!quit);
-      };
+    };
 
-    useEffect(() => {
-        setText([defaultText]);
-        setImgs([defaultImg])
-    }, [])
+    // 文字的操作
+    const textOperate = (type: string, textInfo: any, text: any) => {
+            console.log('setInfo',type,  textInfo);
+            if(type === 'update') {
+                setText(() => {
+                    text.fontInfo= textInfo;
+                    return [...texts]
+                })
+            }else if(type === 'delete') {
+                let newTexts =  texts.filter((item: any) => item.zIndex !== textInfo.zIndex);
+                setText(newTexts);
+            }else if(type === 'updatePos') {
+                setText(() => {
+                    text.top =  textInfo.top;
+                    text.left =  textInfo.left;
+                    return [...texts]
+                })
+            }
+            
+    }
+
+    const imgOperate = (type: string, imgInfo: any, img: any) => {
+        if(type === 'update') {
+            
+        }else if(type === 'delete') {
+            let newImgs =  img.filter((item: any) => item.zIndex !== imgInfo.zIndex);
+            setImgs(newImgs);
+        }else if(type === 'updatePos') {
+            setImgs(() => {
+                img.top =  imgInfo.top;
+                img.left =  imgInfo.left;
+                return [...imgs]
+            })
+        }else if(type === 'updateSize') {
+            setImgs(() => {
+                img.width =  imgInfo.width;
+                img.height =  imgInfo.height;
+                return [...imgs]
+            })
+        }
+    }
+
+    const exportImg = () => {
+        console.log('exportImg', texts, imgs)
+    }
+
+
     
     return (
         <div>
@@ -223,15 +233,15 @@ export default  (props: any) => {
                     <Button type="primary">插入文字</Button>
                 </Popover>
                 <Popover content={contentImg} title="插入图片信息">
-                    <Button type="primary">插入图片</Button>
+                    <Button type="primary" style={{ marginLeft: '50px'}}>插入图片</Button>
                 </Popover>
             </div>
-            <div style={{ position: 'relative', width: '500px',height: '300px', border: '2px solid red', margin: '20px auto'}}>
-                <div ref={containerRef} 
-                    onClick={() => {
-                        console.log('画布')
+            <div style={{ position: 'relative', width: '500px',height: '300px', border: '2px solid red', margin: '20px auto'}} 
+                 onClick={() => {
                         triggerClick()
-                }}
+                 }}>
+                <div ref={containerRef} 
+                    
                 >
                     <div className="stage"
                         style={stageSty}
@@ -241,29 +251,28 @@ export default  (props: any) => {
                         data-r-stage
                         data-r-stage-scale={scale}>
                         {imgs?.length ? imgs.map((img: any, i: number) => {
-                            return <ImgLayer imgData={img.imgData} 
+                            return <ImgLayer imgData={img} 
                                              scale={0} 
                                              quit={quit} 
                                              setEditingLock={(status: boolean) => {
                                                 editingLockRef.current = status;
                                              }}
+                                             setImg={(type: string, imgInfo: any) => imgOperate(type, imgInfo, img)}
                                     />
                         }) : null}
                         {texts?.length ? texts.map((text: any, i:number) => {
                             // return textRender(text, i)
-                            return <TextLayer index={i} textInfo={text} 
+                            return <TextLayer key={text.zIndex} textInfo={text} 
                                     quit={quit}
-                                    setInfo={(letter: string) => {
-                                        console.log('setInfo', letter,text);
-
-                                        setText(() => {
-                                            text.fontInfo.value = letter;
-                                            return [...texts]
-                                        })
-                                    }}/>
+                                    setInfo={(type: string, textInfo?: any) => textOperate(type, textInfo, text)}
+                                   
+                                    />
                         }) : null}
                     </div>
                 </div>
+            </div>
+            <div>
+                <Button onClick={exportImg}>导出图片</Button>
             </div>
         </div>
            

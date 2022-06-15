@@ -11,16 +11,15 @@ interface IProps {
     rootRef?: any;
     scale: number;
     setEditingLock?: (status: boolean) => void;
+    setImg: (type: string, imgInfo: any) => void;
   }
 
 const ImgLayer = (props: IProps) => {
-    const { imgData, quit, rootRef, setEditingLock, scale } = props;
+    const { imgData, quit, rootRef, setEditingLock, scale, setImg } = props;
     const {  top, left, zIndex } = imgData;
 
     const [width, setWidth] = useState<number>(imgData.width);
     const [height, setHeight] = useState<number>(imgData.height);
-
-    console.log('imgData', imgData)
 
     const productRef = useRef<HTMLImageElement>(null);
     const cornerRef = useRef<HTMLDivElement>(null);
@@ -63,7 +62,7 @@ const ImgLayer = (props: IProps) => {
 
     const mouseEnter = () => {
         setBorderOpacity('1');
-      };
+    };
 
     const getDragAngle = (event: any, element: any) => {
     // var element = event.target
@@ -125,7 +124,7 @@ const ImgLayer = (props: IProps) => {
     cornerRef.current.addEventListener('mousedown', event => {
         // 拖动时上锁
     //   setEditingLock(true);
-    event.preventDefault();
+        // event.preventDefault();
 
         const element = productRef.current!;
         const rect = element.getBoundingClientRect();
@@ -154,6 +153,7 @@ const ImgLayer = (props: IProps) => {
     document[p] = function (e) {
         s.left = e.clientX - x + 'px';
         s.top = e.clientY - y + 'px';
+        setImg('updatePos', {top: e.clientY - y, left: e.clientX - x })
     }
     // this.setState({
     //     event: document[p]
@@ -164,22 +164,30 @@ const ImgLayer = (props: IProps) => {
     }
 
     const handleZoom = (e: any) => {
-        console.log('handleZoom', productRef, e.nativeEvent.deltaY);
+        // console.log('handleZoom', productRef, e.nativeEvent.deltaY);
         let { clientWidth, style } = productRef.current!;
-    if (e.nativeEvent.deltaY <= 0 && clientWidth < 500) {
-        style.width = clientWidth + 10 + 'px' //图片宽度每次增加10
-        style.height = height * (clientWidth + 10) / width + 'px';
-        setWidth(clientWidth + 10 );
-        setHeight(height * (clientWidth + 10) / width);
-    } else if (e.nativeEvent.deltaY > 0) {
-        if (clientWidth > 50) {
-            style.width = clientWidth - 10 + 'px'   //图片宽度
-            style.height = height * (clientWidth - 10) / width + 'px';
-            setWidth(clientWidth - 10 );
-            setHeight(height * (clientWidth - 10) / width);
-        } 
-        
-    }
+        let newWidth = width;
+        let newHeight = height;
+        if (e.nativeEvent.deltaY <= 0 && clientWidth < 500) {
+            newWidth = clientWidth + 10;
+            newHeight = height * (clientWidth + 10) / width;
+            style.width = newWidth + 'px' //图片宽度每次增加10
+            style.height = newHeight + 'px';
+            // setWidth(newWidth);
+            // setHeight(newHeight);
+            
+        } else if (e.nativeEvent.deltaY > 0) {
+            if (clientWidth > 50) {
+                newWidth = clientWidth - 10;
+                newHeight = height * (clientWidth - 10) / width;
+                style.width = newWidth + 'px'   //图片宽度
+                style.height = newHeight + 'px';
+                
+            }
+        }
+        setWidth(newWidth);
+        setHeight(newHeight);
+        setImg('updateSize', {width: newWidth, height: newHeight})
     }
 
     return (
