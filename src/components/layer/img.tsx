@@ -77,7 +77,6 @@ const ImgLayer = (props: IProps) => {
     };
 
     useEffect(() => {
-        console.log('cornerRef', cornerRef)
     if (!cornerRef.current) return;
 
     let angle = 0;
@@ -146,7 +145,6 @@ const ImgLayer = (props: IProps) => {
     const imgCurrent = productRef.current!;
     const s = imgCurrent.style
     const p = 'onmousemove';
-    console.log('handleDrag', cornerRef, productRef,s)
     //在jsx中需要用e.persist()此方法会从池中移除合成事件，允许用户代码保留对事件的引用,否则clientX会是null
     let x = e.clientX - imgCurrent.offsetLeft;
     let y = e.clientY - imgCurrent.offsetTop;
@@ -164,7 +162,6 @@ const ImgLayer = (props: IProps) => {
     }
 
     const handleZoom = (e: any) => {
-        // console.log('handleZoom', productRef, e.nativeEvent.deltaY);
         let { clientWidth, style } = productRef.current!;
         let newWidth = width;
         let newHeight = height;
@@ -196,7 +193,7 @@ const ImgLayer = (props: IProps) => {
             style={getContainerWrapprerSty()}
             data-r-product={zIndex}
             ref={wrapperRef}
-      >
+        >
         <div
           className="productWrapper"
           ref={productRef}

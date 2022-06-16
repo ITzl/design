@@ -11,7 +11,6 @@ const TextLayer = (props: any) => {
     const textRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        console.log('setEdit text', editStatus)
         setEdit(false);
     }, [quit])
 
@@ -24,19 +23,14 @@ const TextLayer = (props: any) => {
         const textCurrent = textRef.current!;
         const s = textCurrent.style
         const p = 'onmousemove';
-        // console.log('handleDrag', textRef,s)
         //在jsx中需要用e.persist()此方法会从池中移除合成事件，允许用户代码保留对事件的引用,否则clientX会是null
         let x = e.clientX - textCurrent.offsetLeft;
         let y = e.clientY - textCurrent.offsetTop;
         document[p] = function (e) {
-            // console.log('文字', e.clientX - x)
             s.left = e.clientX - x + 'px';
             s.top = e.clientY - y + 'px';
             setInfo('updatePos', {top: e.clientY - y, left: e.clientX - x })
         }
-        // this.setState({
-        //     event: document[p]
-        // })
         
         document.onmouseup = function () {
             document[p] = null;
@@ -47,13 +41,11 @@ const TextLayer = (props: any) => {
 
     // 文字进入编辑状态
     const edit = (e:any) => {
-        console.log('edit', e)
         setEdit(true)
     }
 
     // 编辑完成
     const onFinish = (values: any) => {
-        console.log('onfinish', values);
         setEdit(false);
         setInfo('update', values)
     }

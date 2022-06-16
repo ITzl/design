@@ -3,7 +3,6 @@ import { Popover, Modal, Form, message,Button, Input} from 'antd';
 import './index.css'
 import ImgLayer from './layer/img';
 import TextLayer from './layer/text';
-import { text } from 'stream/consumers';
 
 const defaultText = {
     top: 0,
@@ -69,11 +68,11 @@ export default  (props: any) => {
       }, [containerSize]);
 
 
-    // 获得层级关系
+    // 获得最大层级关系
     const getzIndex = () => {
         const totalLayer = texts.concat(imgs);
         const curzIndex = Math.max.apply(Math,totalLayer.map((layer: any) => { return layer.zIndex }))
-        console.log('totalLayer', totalLayer, curzIndex) 
+   
         return curzIndex;
     }
 
@@ -83,7 +82,6 @@ export default  (props: any) => {
         // getzIndex();
         if(type === 'image') {
             getImgSize(values.url).then((size: any) => {
-                console.log('img', size, size.width, size.height)
                 const addImg = {
                         width: size.width,
                         height: size.height,
@@ -173,14 +171,12 @@ export default  (props: any) => {
     )
 
     const triggerClick = () => {
-        console.log('triggerClick', editingLockRef)
         if (editingLockRef.current) return;
         setQuit(!quit);
     };
 
     // 文字的操作
     const textOperate = (type: string, textInfo: any, text: any) => {
-            console.log('setInfo',type,  textInfo);
             if(type === 'update') {
                 setText(() => {
                     text.fontInfo= textInfo;
@@ -220,12 +216,198 @@ export default  (props: any) => {
         }
     }
 
+
     const exportImg = () => {
-        console.log('exportImg', texts, imgs)
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = 500;
+        canvas.height = 300;
+        const renderArr: any = [];
+        const stage = document.querySelectorAll('[data-r-stage]')[0];
+        const stageRect = stage.getBoundingClientRect();
+
+        const productsLayer = document.querySelectorAll('[data-r-product]');
+        const textsLayer = document.querySelectorAll('[data-r-text]');
+        const originStageScale = Number(
+            stage.getAttribute('data-r-stage-scale') || 1,
+        );
+        const stageScale = 1 / originStageScale;
+
+        const {
+            top: stageTop,
+            left: stageLeft,
+            right: stageRight,
+            bottom: stageBottom,
+            width: stageWidth,
+            height: stageHeight,
+          } = stageRect;
+
+         // 商品图
+        for (let i = 0; i < productsLayer.length; i++) {
+            const dom = productsLayer[i];
+            const imgDom = dom.querySelectorAll('img')?.[0];
+            
+            const zIndex = dom.getAttribute('data-r-product') || 0;
+            
+            const angle = Number(dom.getAttribute('data-r-product-angle')) || 0;
+            const imgRect = imgDom.getBoundingClientRect();
+            
+            const {
+            top: imgTop,
+            left: imgLeft,
+            right: imgRight,
+            bottom: imgBottom,
+            width: imgWidth,
+            height: imgHeight,
+            } = imgRect;
+            const naturalWidth = imgDom.naturalWidth;
+            const naturalHeight = imgDom.naturalHeight;
+
+            if (!renderArr[zIndex]) {
+                renderArr[zIndex] = [];
+            }
+
+            const sx = 0;
+            const sy = 0;
+
+            // rotate之后元素宽高会改变，这里一通计算还原回原始宽高
+            const dWidth =
+            (imgHeight * Math.abs(Math.sin(angle)) - imgWidth * Math.cos(angle)) /
+            (Math.sin(angle) * Math.sin(angle) - Math.cos(angle) * Math.cos(angle));
+            const dHeight = Math.sin(angle)
+            ? (imgWidth - dWidth * Math.cos(angle)) / Math.abs(Math.sin(angle))
+            : imgHeight;
+
+            // rotate之后left、top会改变，这里一通计算还原
+            const deg = Math.atan(naturalHeight / naturalWidth);
+            const side = dWidth / 2 / Math.cos(deg); // 斜边长
+            const dx =
+            imgLeft -
+            stageLeft +
+            (Math.cos(deg - Math.abs(angle)) * side - dWidth / 2);
+            const dy =
+            imgTop -
+            stageTop +
+            (Math.cos(Math.abs(angle) - Math.PI / 2 + deg) * side - dHeight / 2);
+            renderArr[zIndex].push({
+                type: 'img',
+                image: imgDom,
+                sx,
+                sy,
+                sWidth: naturalWidth,
+                sHeight: naturalHeight,
+                dx: dx * stageScale,
+                dy: dy * stageScale,
+                dWidth: dWidth * stageScale,
+                dHeight: dHeight * stageScale,
+                angle,
+            });
+        }
+
+        // 文字
+        for (let i = 0; i < textsLayer.length; i++) {
+            const dom = textsLayer[i];
+            const info = JSON.parse(dom.getAttribute('data-r-text-info') || '{}');
+
+            const zIndex = dom.getAttribute('data-r-text') || 0;
+            const textRect = dom.getBoundingClientRect();
+            const { value, color, fontFamily, fontSize, lineHeight } = info;
+            const { left, top } = textRect;
+
+            if (!renderArr[zIndex]) {
+            renderArr[zIndex] = [];
+            }
+
+            renderArr[zIndex].push({
+                type: 'text',
+                value,
+                color,
+                fontFamily,
+                fontSize,
+                left: (left - stageLeft) * stageScale,
+                top: (top - stageTop) * stageScale,
+                lineHeight,
+                });
+        }
+
+
+        for (let i = 0; i < renderArr.length; i++) {
+            const layers = renderArr[i];
+            if (!layers) continue;
+        
+            for (let j = 0; j < layers.length; j++) {
+              const layer = layers[j];
+            if (layer.type === 'img') {
+                const {
+                  image,
+                  sx,
+                  sy,
+                  sWidth,
+                  sHeight,
+                  dx,
+                  dy,
+                  dWidth,
+                  dHeight,
+                  angle,
+                } = layer;
+                ctx?.save();
+                ctx?.translate(dx + dWidth / 2, dy + dHeight / 2);
+                ctx?.rotate(angle);
+                ctx?.drawImage(
+                  image,
+                  sx,
+                  sy,
+                  sWidth,
+                  sHeight,
+                  -dWidth / 2,
+                  -dHeight / 2,
+                  dWidth,
+                  dHeight,
+                );
+                ctx?.restore();
+              } else if (layer.type === 'text') {
+                const { value, color, fontFamily, fontSize, left, top, lineHeight } =
+                  layer;
+                // ctx!.
+                ctx!.textBaseline = 'middle';
+                ctx!.fillStyle = color;
+                ctx!.font = `${fontSize}px ${fontFamily}`;
+                ctx?.fillText(value, left, top + lineHeight / 2);
+              }
+            }
+          }
+
+          const url = canvas.toDataURL('"image/jpeg"');
+
+          downImg('导出图片', url);
+        
     }
 
+    // 下载图片
+    const downImg = (fileName: string, url: string) => {
+        let aLink = document.createElement('a')
+        let blob = base64ToBlob(url) // new Blob([content]);
+        let evt = document.createEvent('HTMLEvents')
+        evt.initEvent('click', true, true)// initEvent 不加后两个参数在FF下会报错  事件类型，是否冒泡，是否阻止浏览器的默认行为
+        aLink.download = fileName;
+        aLink.href = URL.createObjectURL(blob)
+        aLink.click()
+    }
 
-    
+    // base64转blob
+    const base64ToBlob = (code: string) => {
+        let parts = code.split(';base64,')
+        let contentType = parts[0].split(':')[1]
+        let raw = window.atob(parts[1]) // 解码base64得到二进制字符串
+        let rawLength = raw.length
+        let uInt8Array = new Uint8Array(rawLength) // 创建8位无符号整数值的类型化数组
+        for (let i = 0; i < rawLength; ++i) {
+            uInt8Array[i] = raw.charCodeAt(i) // 数组接收二进制字符串
+        }
+        return new Blob([uInt8Array], {type: contentType})
+    }
+
     return (
         <div>
             <div style={{ display: "flex", justifyContent: 'center'}}>
@@ -274,6 +456,7 @@ export default  (props: any) => {
             <div>
                 <Button onClick={exportImg}>导出图片</Button>
             </div>
+            
         </div>
            
        
